@@ -1,37 +1,160 @@
-breed [foods food]
+breed [food-flows food-flow]
 breed [spores spore]
 
-spores-own [energy grounded max-child]
-
+spores-own [energy grounded? max-child]
+food-flows-own [food last-hyphae hyphae]
 
 to setup
   clear-all
-  create-foods 1 [
-    set shape "pentagon"
-    set color blue
-  ]
   create-spores 1 [
     set shape "dot"
     set color white
     set energy init-food
-    set grounded True
-    set max-child 9
-
+    set grounded? True
+    set max-child 4
+    ask patch-here [set pcolor blue]
   ]
   reset-ticks
 end
 
-to go
-  let s one-of spores with [count my-links < max-child]
-  let dir [heading] of s
-  let g [grounded] of s
-
-  ifelse g
-  [ask s [hatch 1 [set max-child 3 set color red set grounded False set heading random 361 fd (random-float 2 + 0.5) create-link-with s]]]
-  [ifelse (random 2 = 0)
-    [ask s [fd random-float 2]]
-    [ask s [set grounded True set color white hatch 1 [set max-child 3 set color red set grounded False set heading (heading + (random 181) - 90) fd (random-float 2 + 0.5) create-link-with s]]]
+to spawn-food-flows
+  let r = who spore 0
+  ask r [set energy init-food] ; de la merde à changer
+  ask one-of spores with [link-neighbor? r]
+  [
+    hatch-food-flows 1
+    [
+      set size 0.75
+      set color yellow
+      set label  ""
+      set food food-flow-value
+      set hyphae myself
+      set last-hyphae r
+      create-link-with myself
+      move-to r
+      face myself
+      if (distance myself > 0.1)
+      [
+        fd 0.1
+      ]
+    ]
   ]
+end
+
+to go
+  if (ticks mod 10 = 0)
+  [
+    let s one-of spores with [count link-neighbors with [is-spore? self] < max-child]
+    ifelse s = nobody
+    [
+      print("bug nb links")
+    ]
+    [
+      ifelse [grounded?] of s
+      [
+        ask s
+        [
+          set energy energy / 2
+          hatch 1
+          [
+            set max-child 3
+            set color red
+            set grounded? False
+            set energy [energy] of myself
+            set heading random 361
+            fd (random-float 2 + 0.5)
+            create-link-with s
+          ]
+        ]
+      ]
+      [
+        ifelse (random 4 != 0)
+        [
+          ask s [fd random-float 2]
+        ]
+        [
+          ask s
+          [
+            set grounded? True
+            set color white
+            set energy energy / 2
+            hatch 1
+            [
+              set max-child 3
+              set color red
+              set grounded? False
+              set energy [energy] of myself
+              set heading (heading + (random 181) - 90)
+              fd (random-float 2 + 1)
+              create-link-with s
+            ]
+          ]
+        ]
+      ]
+    ]
+  ]
+
+  if (ticks mod 2 = 0) [spawn-food-flows]
+
+  ask spores
+  [
+    set energy energy - 1
+    if (energy <= 0)
+    [
+      ask link-neighbors with [is-food-flow? self][die]
+      die
+    ]
+  ]
+
+  ask food-flows
+  [
+    ifelse (distance hyphae > 0.1)
+    [
+      fd 0.1
+    ]
+    [
+      ask hyphae
+      [
+        let next one-of link-neighbors with [is-spore? self]
+        ifelse (next = [last-hyphae] of myself)
+        [
+          set energy energy + [food] of myself
+          ask myself [die]
+        ]
+        [
+          set energy energy + food-sharing * [food] of myself
+          ask myself
+          [
+            set food food - (food * food-sharing)
+            move-to hyphae
+            face next
+            fd 0.1
+            set last-hyphae hyphae
+            set hyphae next
+            ask my-links [die]
+            create-link-with hyphae
+          ]
+        ]
+      ]
+    ]
+  ]
+
+  ifelse (show-energy)
+  [
+    ask spores [set label energy ]
+  ]
+  [
+    ask spores [set label  ""]
+  ]
+
+  ifelse (hide-flows)
+  [
+    ask food-flows [hide-turtle]
+  ]
+  [
+    ask food-flows [show-turtle]
+  ]
+
   tick
 end
 @#$#@#$#@
@@ -63,10 +186,10 @@ ticks
 30.0
 
 BUTTON
-43
-90
-106
-123
+46
+274
+109
+307
 setup
 setup
 NIL
@@ -80,10 +203,10 @@ NIL
 1
 
 BUTTON
-124
-91
-187
-124
+127
+274
+190
+307
 go
 go
 T
@@ -97,19 +220,71 @@ NIL
 1
 
 SLIDER
-35
+24
 22
-207
+196
 55
 init-food
 init-food
 50
 1000
 100.0
+5
+1
+NIL
+HORIZONTAL
+
+SWITCH
+53
+153
+170
+186
+show-energy
+show-energy
+1
+1
+-1000
+
+SLIDER
+26
+65
+198
+98
+food-flow-value
+food-flow-value
+5
+100
+30.0
 1
 1
 NIL
 HORIZONTAL
+
+SLIDER
+25
+105
+197
+138
+food-sharing
+food-sharing
+0
+1
+0.1
+0.01
+1
+NIL
+HORIZONTAL
+
+SWITCH
+53
+195
+170
+228
+hide-flows
+hide-flows
+1
+1
+-1000
 
 @#$#@#$#@
 ## WHAT IS IT?
