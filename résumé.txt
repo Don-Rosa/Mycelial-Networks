@@ -1,0 +1,8 @@
+Fait:
+-Appréhender Netlogo et tester patchs vs agents
+
+Objectifs :
+
+Implémenter le premier niveau avec une simple source de bouffe, basée sur les patchs
+La simulation doit +/- ressembler a des autoroutes pour les chemins validés et des arbres binaires denses pour les parties d'exploration.
+Comment gérer les collisions entre hyphae?
