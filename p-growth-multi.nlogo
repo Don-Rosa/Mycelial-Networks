@@ -18,20 +18,24 @@ breed [nuts nut]
 to setup
   clear-all
 
+  let colors (list brown green blue pink red)
+
   ; set food in the middle
   ask patch 0 0 [ set pcolor yellow ]
+  ask patch -238 155 [ set pcolor yellow ]
+  ask patch 180 15  [ set pcolor yellow ]
+  ask patch -150 -200  [ set pcolor yellow ]
+  ask patch 230 -315  [ set pcolor yellow ]
 
   ; set hyphaes around
-  ask patch 0 0 [ ask neighbors [
-    set pcolor brown
-   ]
-  ]
-
-
-
-  ask patches with [ pcolor = brown ] [
-    set extractor? false
-    set tip? true
+  let i 0
+  ask patches with [ pcolor = yellow ] [
+    ask neighbors4 [
+      set pcolor item i colors
+      set extractor? false
+      set tip? true
+    ]
+    set i i + 1
   ]
 
   reset-ticks
@@ -40,7 +44,7 @@ end
 to transform
   ; hyphaes next to food become extractors
   ask patches with [ pcolor = yellow ] [
-    ask neighbors with [ extractor? = false ] [
+    ask neighbors4 with [ extractor? = false ] [
       set odx pxcor - [pxcor] of myself
       set ody pycor - [pycor] of myself
       set cdx odx set cdy ody
@@ -56,34 +60,32 @@ to grow
     or pycor = min-pycor or pycor = max-pycor [ set tip? false stop ]
 
 
-    repeat 2 [
-      ; growth direction
-      let gdx cdx let gdy cdy
-      ifelse ( cdx = odx ) and ( cdy = ody ) [
-        ; with some probability growth direction deviates from current flow direction
-        if random-float 1 < 0.2 [
-          (ifelse
-            cdx = 0 [ set gdx one-of [ 1 -1 ] ]
-            cdy = 0 [ set gdy one-of [ 1 -1 ] ]
-            random-float 1 < 0.5 [ set gdx 0 ] [ set gdy 0 ])
-        ]
-      ] [
-        ; with some probability original flow direction is restored
-        if random-float 1 < 0.1 [
-          set gdx odx
-          set gdy ody
-        ]
+    repeat random 2 + 1 [
+    ; growth direction
+    let gdx cdx let gdy cdy
+    ifelse ( cdx = odx ) and ( cdy = ody ) [
+      ; with some probability growth direction deviates from current flow direction
+      if random-float 1 < 0.3 [
+        if cdx = 0 [ set gdx one-of [ 1 -1 ] ]
+        if cdy = 0 [ set gdy one-of [ 1 -1 ] ]
       ]
+    ] [
+      ; with some probability original flow direction is restored
+      if random-float 1 < 0.1 [
+        set gdx odx
+        set gdy ody
+      ]
+    ]
 
-      ask patch (pxcor + gdx) (pycor + gdy) [
-        if pcolor = brown [ stop ]
-        set odx [odx] of myself
-        set ody [ody] of myself
-        set cdx gdx set cdy gdy
-        set pcolor brown
-        set extractor? false
-        set tip? true
-      ]
+    ask patch (pxcor + gdx) (pycor + gdy) [
+        if pcolor != black [ stop ]
+      set odx [odx] of myself
+      set ody [ody] of myself
+      set cdx gdx set cdy gdy
+        set pcolor [pcolor] of myself
+      set extractor? false
+      set tip? true
+    ]
     ]
     set tip? false
   ]
@@ -101,11 +103,11 @@ end
 GRAPHICS-WINDOW
 296
 20
-817
-542
+691
+416
 -1
 -1
-1.0
+3.0
 1
 10
 1
@@ -115,10 +117,10 @@ GRAPHICS-WINDOW
 1
 1
 1
--254
-254
--254
-254
+-64
+64
+-64
+64
 0
 0
 1
@@ -168,7 +170,7 @@ branching_probability
 branching_probability
 0
 100
-69.0
+88.0
 1
 1
 NIL
