@@ -21,7 +21,9 @@ to setup
   ; set food in the middle
   ask patch 0 0 [ set pcolor yellow ]
 
+
   ; set hyphaes around
+  ; optimise with multiple race of patch?
   ask patch 0 0 [ ask neighbors [
     set pcolor brown
    ]
@@ -33,7 +35,6 @@ to setup
     set extractor? false
     set tip? true
   ]
-
   reset-ticks
 end
 
@@ -96,13 +97,14 @@ end
 to go
   transform
   grow
+  tick
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
 296
 20
-817
-542
+813
+538
 -1
 -1
 1.0
@@ -159,20 +161,41 @@ NIL
 NIL
 1
 
-SLIDER
-27
-201
-238
-234
-branching_probability
-branching_probability
-0
-100
-69.0
-1
-1
-NIL
-HORIZONTAL
+PLOT
+35
+215
+235
+365
+Micellium number
+ticks
+hyphae
+0.0
+100.0
+0.0
+1000.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -8431303 true "" "plot count patches with [pcolor = brown]"
+
+PLOT
+37
+377
+237
+527
+Micellium size
+ticks
+h / s^2
+0.0
+100.0
+0.0
+2.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -2674135 true "" "plot count patches with [pcolor = brown] / (max [distancexy 0 0] of patches with [pcolor = brown] * max [distancexy 0 0] of patches with [pcolor = brown] )"
 
 @#$#@#$#@
 ## WHAT IS IT?
