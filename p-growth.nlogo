@@ -190,12 +190,12 @@ h / s^2
 0.0
 100.0
 0.0
-2.0
+1.0
 true
 false
 "" ""
 PENS
-"default" 1.0 0 -2674135 true "" "plot count patches with [pcolor = brown] / (max [distancexy 0 0] of patches with [pcolor = brown] * max [distancexy 0 0] of patches with [pcolor = brown] )"
+"default" 1.0 0 -2674135 true "" ";let r max [distancexy 0 0] of patches with [pcolor = brown]\n;plot count patches with [pcolor = brown] / (r * r * 2)\nplot count patches with [pcolor = brown] / count patches"
 
 @#$#@#$#@
 ## WHAT IS IT?
