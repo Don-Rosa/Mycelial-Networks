@@ -1,7 +1,3 @@
-globals [
-
-]
-
 patches-own [
   extractor?
   tip?
@@ -13,8 +9,6 @@ patches-own [
   cdy
 ]
 
-breed [nuts nut]
-
 to setup
   clear-all
 
@@ -23,7 +17,6 @@ to setup
 
 
   ; set hyphaes around
-  ; optimise with multiple race of patch?
   ask patch 0 0 [ ask neighbors [
     set pcolor brown
    ]
@@ -90,21 +83,44 @@ to grow
   ]
 end
 
-to branch
+
+to draw
+  let mycelium patches with [pcolor = brown]
+
+  set-current-plot "Micellium size"
+  let p count mycelium
+  plot p
+
+  set-current-plot "Micellium density"
+  let r max [distancexy 0 0] of mycelium
+
+  ifelse ticks > 1 or r = 0
+  [
+
+    plot p / (r * r * 2)
+  ]
+  [ plot 0 ] ; the formula above don't work for r = 0
+
+  set-current-plot "Center of mass"
+  let cmx (sum [pxcor] of mycelium ) / p
+  let cmy (sum [pycor] of mycelium ) / p
+  plot sqrt (cmx ^ 2 + cmy ^ 2)
+
 
 end
 
 to go
   transform
   grow
+  draw
   tick
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
 296
 20
-813
-538
+833
+558
 -1
 -1
 1.0
@@ -117,10 +133,10 @@ GRAPHICS-WINDOW
 1
 1
 1
--254
-254
--254
-254
+-264
+264
+-264
+264
 0
 0
 1
@@ -162,40 +178,58 @@ NIL
 1
 
 PLOT
-35
-215
-235
-365
-Micellium number
+845
+40
+1045
+190
+Micellium size
 ticks
 hyphae
 0.0
-100.0
-0.0
 1000.0
+0.0
+10000.0
 true
 false
 "" ""
 PENS
-"default" 1.0 0 -8431303 true "" "plot count patches with [pcolor = brown]"
+"default" 1.0 0 -6459832 true "" ""
 
 PLOT
-37
-377
-237
-527
-Micellium size
+847
+218
+1047
+368
+Micellium density
 ticks
-h / s^2
+density
 0.0
-100.0
+1000.0
 0.0
 1.0
 true
 false
 "" ""
 PENS
-"default" 1.0 0 -2674135 true "" ";let r max [distancexy 0 0] of patches with [pcolor = brown]\n;plot count patches with [pcolor = brown] / (r * r * 2)\nplot count patches with [pcolor = brown] / count patches"
+"default" 1.0 0 -8431303 true "" ""
+
+PLOT
+846
+390
+1046
+540
+Center of mass
+ticks
+distance
+0.0
+1000.0
+-10.0
+10.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -6459832 true "" ""
 
 @#$#@#$#@
 ## WHAT IS IT?

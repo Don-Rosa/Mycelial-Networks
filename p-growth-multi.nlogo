@@ -1,7 +1,3 @@
-globals [
-
-]
-
 patches-own [
   extractor?
   tip?
@@ -12,9 +8,6 @@ patches-own [
   cdx
   cdy
 ]
-
-breed [nuts nut]
-
 to setup
   clear-all
 
@@ -91,23 +84,107 @@ to grow
   ]
 end
 
-to branch
+to draw
+  let mycelium patches with [pcolor != black]
+  let m0 mycelium with [pcolor = brown]
+  let m1 mycelium with [pcolor = pink]
+  let m2 mycelium with [pcolor = red]
+  let m3 mycelium with [pcolor = green]
+  let m4 mycelium with [pcolor = blue]
+
+  set-current-plot "Micellium size"
+  set-current-plot-pen "pen-0"
+  let p0 count m0
+  plot p0
+  set-current-plot-pen "pen-1"
+  let p1 count m1
+  plot p1
+  set-current-plot-pen "pen-2"
+  let p2 count m2
+  plot p2
+  set-current-plot-pen "pen-3"
+  let p3 count m3
+  plot p3
+  set-current-plot-pen "pen-4"
+  let p4 count m4
+  plot p4
+
+
+
+  set-current-plot "Micellium density"
+  set-current-plot-pen "pen-0"
+  let r0 max [distancexy 0 0] of m0
+  ifelse ticks > 1 or r0 = 0
+  [
+
+    plot p0 / (r0 * r0 * 2)
+  ]
+  [ plot 0 ] ; the formula above don't work for r = 0
+  set-current-plot-pen "pen-1"
+   let r1 max [distancexy -238 155] of m1
+
+  ifelse ticks > 1 or r1 = 0
+  [
+
+    plot p1 / (r1 * r1 * 2)
+  ]
+  [ plot 0 ] ; the formula above don't work for r = 0
+  set-current-plot-pen "pen-2"
+   let r2 max [distancexy 180 15] of m2
+
+  ifelse ticks > 1 or r2 = 0
+  [
+
+    plot p2 / (r2 * r2 * 2)
+  ]
+  [ plot 0 ] ; the formula above don't work for r = 0
+  set-current-plot-pen "pen-3"
+   let r3 max [distancexy -150 -200] of m3
+
+  ifelse ticks > 1 or r3 = 0
+  [
+
+    plot p3 / (r3 * r3 * 2)
+  ]
+  [ plot 0 ] ; the formula above don't work for r = 0
+  set-current-plot-pen "pen-4"
+  let r4 max [distancexy 230 -315] of m4
+
+  ifelse ticks > 1 or r4 = 0
+  [
+
+    plot p4 / (r4 * r4 * 2)
+  ]
+  [ plot 0 ] ; the formula above don't work for r = 0
+
+  set-current-plot "Center of mass"
+  set-current-plot-pen "pen-0"
+  let cmx0 (sum [pxcor] of m0 ) / p0
+  let cmy0 (sum [pycor] of m0 ) / p0
+  plot sqrt (cmx0 ^ 2 + cmy0 ^ 2)
+  set-current-plot-pen "pen-1"
+  set-current-plot-pen "pen-2"
+  set-current-plot-pen "pen-3"
+  set-current-plot-pen "pen-4"
+
 
 end
 
 to go
   transform
   grow
+  draw
+  tick
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
 296
 20
-691
-416
+833
+558
 -1
 -1
-3.0
+1.0
 1
 10
 1
@@ -117,10 +194,10 @@ GRAPHICS-WINDOW
 1
 1
 1
--64
-64
--64
-64
+-264
+264
+-264
+264
 0
 0
 1
@@ -128,10 +205,10 @@ ticks
 30.0
 
 BUTTON
-65
-51
-138
-84
+66
+22
+139
+55
 setup
 setup
 NIL
@@ -145,10 +222,10 @@ NIL
 1
 
 BUTTON
+67
 70
-110
-133
-143
+138
+103
 go
 go
 T
@@ -161,20 +238,71 @@ NIL
 NIL
 1
 
-SLIDER
-27
-201
-238
-234
-branching_probability
-branching_probability
-0
-100
-88.0
-1
-1
-NIL
-HORIZONTAL
+PLOT
+857
+21
+1073
+183
+Micellium size
+ticks
+hyphae
+0.0
+1000.0
+0.0
+1000.0
+true
+false
+"" ""
+PENS
+"pen-0" 1.0 0 -8431303 true "" ""
+"pen-1" 1.0 0 -2064490 true "" ""
+"pen-2" 1.0 0 -2674135 true "" ""
+"pen-3" 1.0 0 -14439633 true "" ""
+"pen-4" 1.0 0 -14070903 true "" ""
+
+PLOT
+859
+193
+1072
+371
+Micellium density
+ticks
+density 
+0.0
+1000.0
+0.0
+1.0
+true
+false
+"" ""
+PENS
+"pen-0" 1.0 0 -8431303 true "" ""
+"pen-1" 1.0 0 -2064490 true "" ""
+"pen-2" 1.0 0 -2674135 true "" ""
+"pen-3" 1.0 0 -13840069 true "" ""
+"pen-4" 1.0 0 -13345367 true "" ""
+
+PLOT
+858
+379
+1073
+554
+Center of mass
+ticks
+distance
+0.0
+1000.0
+-10.0
+10.0
+true
+false
+"" ""
+PENS
+"pen-0" 1.0 0 -6459832 true "" ""
+"pen-1" 1.0 0 -2064490 true "" ""
+"pen-2" 1.0 0 -2674135 true "" ""
+"pen-3" 1.0 0 -13840069 true "" ""
+"pen-4" 1.0 0 -13345367 true "" ""
 
 @#$#@#$#@
 ## WHAT IS IT?
