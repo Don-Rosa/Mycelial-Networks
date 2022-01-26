@@ -1,3 +1,5 @@
+globals [food]
+
 patches-own [
   extractor?
   tip?
@@ -15,25 +17,21 @@ to setup
   ; set food in the middle
   ask patch 0 0 [ set pcolor yellow ]
 
+  set food patches with [ pcolor = yellow ]
 
   ; set hyphaes around
   ask patch 0 0 [ ask neighbors [
     set pcolor brown
-   ]
-  ]
-
-
-
-  ask patches with [ pcolor = brown ] [
     set extractor? false
     set tip? true
+    ]
   ]
   reset-ticks
 end
 
 to transform
   ; hyphaes next to food become extractors
-  ask patches with [ pcolor = yellow ] [
+  ask food [
     ask neighbors with [ extractor? = false ] [
       set odx pxcor - [pxcor] of myself
       set ody pycor - [pycor] of myself
@@ -44,56 +42,55 @@ to transform
 end
 
 to grow
-  ask patches with [ tip? = true ] [
-
-    if pxcor = min-pxcor or pxcor = max-pxcor ; tip dies if it reaches env's limits
-    or pycor = min-pycor or pycor = max-pycor [ set tip? false stop ]
-
-
-    repeat 2 [
-      ; growth direction
-      let gdx cdx let gdy cdy
-      ifelse ( cdx = odx ) and ( cdy = ody ) [
-        ; with some probability growth direction deviates from current flow direction
-        if random-float 1 < 0.2 [
-          (ifelse
-            cdx = 0 [ set gdx one-of [ 1 -1 ] ]
-            cdy = 0 [ set gdy one-of [ 1 -1 ] ]
-            random-float 1 < 0.5 [ set gdx 0 ] [ set gdy 0 ])
+  ask patches with [ tip? = true ]
+  [
+    ifelse pxcor = min-pxcor or pxcor = max-pxcor ; tip dies if it reaches env's limits
+    or pycor = min-pycor or pycor = max-pycor [set tip? false]
+    [
+      repeat 2 [
+        ; growth direction
+        let gdx cdx let gdy cdy
+        ifelse ( cdx = odx ) and ( cdy = ody ) [
+          ; with some probability growth direction deviates from current flow direction
+          if random-float 1 < 0.2 [
+            (ifelse
+              cdx = 0 [ set gdx one-of [ 1 -1 ] ]
+              cdy = 0 [ set gdy one-of [ 1 -1 ] ]
+              random-float 1 < 0.5 [ set gdx 0 ] [ set gdy 0 ])
+          ]
+        ] [
+          ; with some probability original flow direction is restored
+          if random-float 1 < 0.1 [
+            set gdx odx
+            set gdy ody
+          ]
         ]
-      ] [
-        ; with some probability original flow direction is restored
-        if random-float 1 < 0.1 [
-          set gdx odx
-          set gdy ody
+
+        ask patch (pxcor + gdx) (pycor + gdy) [
+          if pcolor != brown [
+            set odx [odx] of myself
+            set ody [ody] of myself
+            set cdx gdx set cdy gdy
+            set pcolor brown
+            set extractor? false
+            set tip? true
+          ]
         ]
       ]
-
-      ask patch (pxcor + gdx) (pycor + gdy) [
-        if pcolor = brown [ stop ]
-        set odx [odx] of myself
-        set ody [ody] of myself
-        set cdx gdx set cdy gdy
-        set pcolor brown
-        set extractor? false
-        set tip? true
-      ]
+      set tip? false
     ]
-    set tip? false
   ]
 end
 
 
 to draw
-  let mycelium patches with [pcolor = brown]
-
+  let mycelium patches with [ pcolor = brown ]
   set-current-plot "Micellium size"
   let p count mycelium
   plot p
 
   set-current-plot "Micellium density"
   let r max [distancexy 0 0] of mycelium
-
   ifelse ticks > 1 or r = 0
   [
 
@@ -105,8 +102,6 @@ to draw
   let cmx (sum [pxcor] of mycelium ) / p
   let cmy (sum [pycor] of mycelium ) / p
   plot sqrt (cmx ^ 2 + cmy ^ 2)
-
-
 end
 
 to go
@@ -186,7 +181,7 @@ Micellium size
 ticks
 hyphae
 0.0
-1000.0
+400.0
 0.0
 10000.0
 true
@@ -204,7 +199,7 @@ Micellium density
 ticks
 density
 0.0
-1000.0
+400.0
 0.0
 1.0
 true
@@ -222,7 +217,7 @@ Center of mass
 ticks
 distance
 0.0
-1000.0
+400.0
 -10.0
 10.0
 true

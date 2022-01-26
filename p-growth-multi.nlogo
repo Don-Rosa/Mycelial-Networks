@@ -1,3 +1,5 @@
+globals [food]
+
 patches-own [
   extractor?
   tip?
@@ -10,33 +12,41 @@ patches-own [
 ]
 to setup
   clear-all
+  ; set food in the middle and hyphae around
 
-  let colors (list brown green blue pink red)
+  ask patch 0 0 [ set pcolor yellow ask neighbors4 [
+    set pcolor brown
+    set extractor? false
+    set tip? true
+  ]]
+  ask patch -238 155 [ set pcolor yellow ask neighbors4 [
+    set pcolor pink
+    set extractor? false
+    set tip? true
+  ]]
+  ask patch 180 15  [ set pcolor yellow ask neighbors4 [
+    set pcolor red
+    set extractor? false
+    set tip? true
+  ]]
+  ask patch -150 -200  [ set pcolor yellow ask neighbors4 [
+    set pcolor green
+    set extractor? false
+    set tip? true
+  ]]
+  ask patch 230 213  [ set pcolor yellow ask neighbors4 [
+    set pcolor blue
+    set extractor? false
+    set tip? true
+  ]]
 
-  ; set food in the middle
-  ask patch 0 0 [ set pcolor yellow ]
-  ask patch -238 155 [ set pcolor yellow ]
-  ask patch 180 15  [ set pcolor yellow ]
-  ask patch -150 -200  [ set pcolor yellow ]
-  ask patch 230 -315  [ set pcolor yellow ]
-
-  ; set hyphaes around
-  let i 0
-  ask patches with [ pcolor = yellow ] [
-    ask neighbors4 [
-      set pcolor item i colors
-      set extractor? false
-      set tip? true
-    ]
-    set i i + 1
-  ]
-
+  set food patches with [ pcolor = yellow ]
   reset-ticks
 end
 
 to transform
   ; hyphaes next to food become extractors
-  ask patches with [ pcolor = yellow ] [
+  ask food [
     ask neighbors4 with [ extractor? = false ] [
       set odx pxcor - [pxcor] of myself
       set ody pycor - [pycor] of myself
@@ -54,31 +64,31 @@ to grow
 
 
     repeat random 2 + 1 [
-    ; growth direction
-    let gdx cdx let gdy cdy
-    ifelse ( cdx = odx ) and ( cdy = ody ) [
-      ; with some probability growth direction deviates from current flow direction
-      if random-float 1 < 0.3 [
-        if cdx = 0 [ set gdx one-of [ 1 -1 ] ]
-        if cdy = 0 [ set gdy one-of [ 1 -1 ] ]
+      ; growth direction
+      let gdx cdx let gdy cdy
+      ifelse ( cdx = odx ) and ( cdy = ody ) [
+        ; with some probability growth direction deviates from current flow direction
+        if random-float 1 < 0.3 [
+          if cdx = 0 [ set gdx one-of [ 1 -1 ] ]
+          if cdy = 0 [ set gdy one-of [ 1 -1 ] ]
+        ]
+      ] [
+        ; with some probability original flow direction is restored
+        if random-float 1 < 0.1 [
+          set gdx odx
+          set gdy ody
+        ]
       ]
-    ] [
-      ; with some probability original flow direction is restored
-      if random-float 1 < 0.1 [
-        set gdx odx
-        set gdy ody
-      ]
-    ]
 
-    ask patch (pxcor + gdx) (pycor + gdy) [
+      ask patch (pxcor + gdx) (pycor + gdy) [
         if pcolor != black [ stop ]
-      set odx [odx] of myself
-      set ody [ody] of myself
-      set cdx gdx set cdy gdy
+        set odx [odx] of myself
+        set ody [ody] of myself
+        set cdx gdx set cdy gdy
         set pcolor [pcolor] of myself
-      set extractor? false
-      set tip? true
-    ]
+        set extractor? false
+        set tip? true
+      ]
     ]
     set tip? false
   ]
@@ -121,7 +131,7 @@ to draw
   ]
   [ plot 0 ] ; the formula above don't work for r = 0
   set-current-plot-pen "pen-1"
-   let r1 max [distancexy -238 155] of m1
+  let r1 max [distancexy -238 155] of m1
 
   ifelse ticks > 1 or r1 = 0
   [
@@ -130,7 +140,7 @@ to draw
   ]
   [ plot 0 ] ; the formula above don't work for r = 0
   set-current-plot-pen "pen-2"
-   let r2 max [distancexy 180 15] of m2
+  let r2 max [distancexy 180 15] of m2
 
   ifelse ticks > 1 or r2 = 0
   [
@@ -139,7 +149,7 @@ to draw
   ]
   [ plot 0 ] ; the formula above don't work for r = 0
   set-current-plot-pen "pen-3"
-   let r3 max [distancexy -150 -200] of m3
+  let r3 max [distancexy -150 -200] of m3
 
   ifelse ticks > 1 or r3 = 0
   [
@@ -148,7 +158,7 @@ to draw
   ]
   [ plot 0 ] ; the formula above don't work for r = 0
   set-current-plot-pen "pen-4"
-  let r4 max [distancexy 230 -315] of m4
+  let r4 max [distancexy 230 213] of m4
 
   ifelse ticks > 1 or r4 = 0
   [
@@ -162,11 +172,26 @@ to draw
   let cmx0 (sum [pxcor] of m0 ) / p0
   let cmy0 (sum [pycor] of m0 ) / p0
   plot sqrt (cmx0 ^ 2 + cmy0 ^ 2)
-  set-current-plot-pen "pen-1"
-  set-current-plot-pen "pen-2"
-  set-current-plot-pen "pen-3"
-  set-current-plot-pen "pen-4"
 
+  set-current-plot-pen "pen-1"
+  let cmx1 (sum [pxcor] of m1 ) / p1
+  let cmy1 (sum [pycor] of m1 ) / p1
+  plot sqrt ((cmx1 + 238) ^ 2 + (cmy1 - 155) ^ 2)
+
+  set-current-plot-pen "pen-2"
+  let cmx2 (sum [pxcor] of m2 ) / p2
+  let cmy2 (sum [pycor] of m2 ) / p2
+  plot sqrt ((cmx2 - 180) ^ 2 + (cmy2 - 15) ^ 2)
+
+  set-current-plot-pen "pen-3"
+  let cmx3 (sum [pxcor] of m3 ) / p3
+  let cmy3 (sum [pycor] of m3 ) / p3
+  plot sqrt ((cmx3 + 150) ^ 2 + (cmy3 + 200) ^ 2)
+
+  set-current-plot-pen "pen-4"
+  let cmx4 (sum [pxcor] of m4 ) / p4
+  let cmy4 (sum [pycor] of m4) / p4
+  plot sqrt ((cmx4 - 230) ^ 2 + (cmy4 - 213) ^ 2)
 
 end
 
@@ -247,7 +272,7 @@ Micellium size
 ticks
 hyphae
 0.0
-1000.0
+400.0
 0.0
 1000.0
 true
@@ -269,9 +294,9 @@ Micellium density
 ticks
 density 
 0.0
-1000.0
+400.0
 0.0
-1.0
+0.5
 true
 false
 "" ""
@@ -291,7 +316,7 @@ Center of mass
 ticks
 distance
 0.0
-1000.0
+400.0
 -10.0
 10.0
 true
