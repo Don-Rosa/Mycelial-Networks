@@ -5,6 +5,10 @@ globals [
   HYPH_INIT_LIFE
   TIP_INIT_LIFE
   NUT_INIT_LIFE
+  RUN?
+  mouse-was-down?
+  food_number
+  wall?
 ]
 
 breed [ tips tip ]
@@ -45,32 +49,75 @@ to setup
   let ys (list 0)
   let p0 patch 0 0
   let p0_neighbors patches with [ distance p0 < 5 ]
-  let s0 (patch-set p0 p0_neighbors)
-  let p1 patch 120 120
-  let p1_neighbors patches with [ distance p1 < 5 ]
-  let s1 (patch-set p1 p1_neighbors)
-  let p2 patch -20 -100
-  let p2_neighbors patches with [ distance p2 < 5 ]
-  let s2 (patch-set p2 p2_neighbors)
-  initFood s0 0 yellow
+  initFood p0_neighbors 0 yellow
   initMycelium ; only around s0
-  initFood s1 1 white
-  initFood s2 2 cyan
-
+  set food_number 1
+  set RUN? false
+  set mouse-was-down? false
+  set wall? false
+  if display_history
+  [
+    ask patches with [pcolor = black] [set pcolor white]
+  ]
   reset-ticks
 end
 
-to go
-  collectFood
-  let hyphaes patches with [ hyph? = true ]
-  ask tips [ forage ]
-  ask nuts [ flow ]
-  sproutTips hyphaes
-  surroundFood hyphaes
-  hyphaesTickCost hyphaes
-  draw
-  tick
+to-report mouse-clicked?
+  report (mouse-was-down? = true and not mouse-down?)
 end
+
+to pause
+  set RUN? not Run?
+end
+
+to wall
+   set wall? not wall?
+end
+
+to go
+  ifelse RUN?
+  [
+    collectFood
+    let hyphaes patches with [ hyph? = true ]
+    ask tips [ forage ]
+    ask nuts [ flow ]
+    sproutTips hyphaes
+    surroundFood hyphaes
+    hyphaesTickCost hyphaes
+    draw
+    tick
+  ]
+
+  [
+    let mouse-is-down? mouse-down?
+    ifelse wall?
+    [
+      if mouse-is-down?
+      [
+        let x mouse-xcor
+        let y mouse-ycor
+        ask patches with
+        [
+          (x - 5 <= pxcor and pxcor <= x + 5)
+          and
+          (y - 5 <= pycor and pycor <= y + 5)
+        ] [ set pcolor white ]
+      ]
+    ]
+    [
+      if mouse-clicked?
+      [
+        let p patch mouse-xcor mouse-ycor
+        let mouse_neighbors patches with [ distance p  < 5 ]
+        initFood mouse_neighbors food_number (list random 230 random 230 random 230) ; 230 instead of 256 to avoid to black of bright colors
+        set food_number food_number + 1
+      ]
+      set mouse-was-down? mouse-is-down?
+    ]
+    display
+  ]
+end
+
 
 to resetPatch
   set food? false
@@ -227,8 +274,8 @@ end
 
 
 to draw
-  let mycelium patches with [ pcolor != black ]
-  set-current-plot "Micellium size"
+  let mycelium patches with [ hyph? = true ]
+  set-current-plot "Micelium size"
   ;set-current-plot-pen "hyphae" Pas forcement utile
   let p count mycelium
   ; plot p
@@ -237,7 +284,7 @@ to draw
   set-current-plot-pen "nutriment"
   plot count nuts
 
-  set-current-plot "Micellium symmetry"
+  set-current-plot "Micelium symmetry"
   let up 0
   let up_c 0
   let down 0
@@ -248,10 +295,10 @@ to draw
   let ri_c 0
   ask mycelium
   [
-    if pxcor > 0  [set up up + pxcor set up_c up_c + 1]
-    if pxcor < 0  [set down down - pxcor set down_c down_c + 1]
-    if pycor > 0  [set ri ri + pycor set ri_c ri_c + 1]
-    if pycor < 0  [set le le - pycor set le_c le_c + 1]
+    if pycor > 0  [set up up + pycor set up_c up_c + 1]
+    if pycor < 0  [set down down - pycor set down_c down_c + 1]
+    if pxcor > 0  [set ri ri + pxcor set ri_c ri_c + 1]
+    if pxcor < 0  [set le le - pxcor set le_c le_c + 1]
   ]
 
   set-current-plot-pen "Up"
@@ -263,21 +310,23 @@ to draw
   set-current-plot-pen "Left"
   plot le / le_c
 
-
-  set-current-plot "Micellium density"
-  let r max [distancexy 0 0] of mycelium
-  ifelse ticks > 1 or r = 0
-  [
-
-    plot p / (r * r * 2)
-  ]
-  [ plot 0 ] ; the formula above don't work for r = 0
-
   set-current-plot "Center of mass"
 
   let cmx (sum [pxcor] of mycelium ) / p
   let cmy (sum [pycor] of mycelium ) / p
   plot sqrt (cmx ^ 2 + cmy ^ 2)
+
+
+  set-current-plot "Micelium density"
+  let r max [distancexy cmx cmy] of mycelium
+  ifelse ticks > 1 or r = 0
+  [
+
+    plot p / (r * r * pi)
+  ]
+  [ plot 0 ] ; the formula above don't work for r = 0
+
+
 
 end
 @#$#@#$#@
@@ -309,10 +358,10 @@ ticks
 30.0
 
 BUTTON
-78
-58
-151
-91
+122
+15
+195
+48
 setup
 setup
 NIL
@@ -326,10 +375,10 @@ NIL
 1
 
 BUTTON
-78
-106
-151
-139
+121
+68
+196
+101
 go
 go
 T
@@ -343,10 +392,10 @@ NIL
 1
 
 SLIDER
-38
-223
-263
-256
+43
+252
+268
+285
 collect_food_probability
 collect_food_probability
 0
@@ -358,40 +407,40 @@ NIL
 HORIZONTAL
 
 SLIDER
-38
-178
-264
-211
+43
+207
+269
+240
 branching_threshold
 branching_threshold
 90
 100
-96.9
+96.0
 0.1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-62
-288
-234
-321
+67
+317
+239
+350
 nut_cost
 nut_cost
 0
 1
-0.15
+0.35
 0.01
 1
 NIL
 HORIZONTAL
 
 SLIDER
-62
-332
-234
-365
+67
+361
+239
+394
 hyphae_cost
 hyphae_cost
 0
@@ -403,26 +452,26 @@ NIL
 HORIZONTAL
 
 SLIDER
-61
-377
-233
-410
+66
+406
+238
+439
 tip_cost
 tip_cost
 0
 1
-0.25
+0.35
 0.01
 1
 NIL
 HORIZONTAL
 
 PLOT
-1143
-322
-1405
-537
-Micellium density
+1144
+74
+1423
+282
+Micelium density
 ticks
 density
 0.0
@@ -433,7 +482,7 @@ true
 false
 "" ""
 PENS
-"default" 1.0 0 -6459832 true "" ""
+"center" 1.0 0 -6459832 true "" ""
 
 PLOT
 854
@@ -455,10 +504,10 @@ PENS
 
 PLOT
 852
-49
+73
 1126
-258
-Micellium size
+282
+Micelium size
 ticks
 NIL
 0.0
@@ -473,11 +522,11 @@ PENS
 "nutriment" 1.0 0 -14439633 true "" ""
 
 PLOT
-1142
-55
-1417
-255
-Micellium symmetry
+1144
+321
+1424
+535
+Micelium symmetry
 ticks
 NIL
 0.0
@@ -492,6 +541,51 @@ PENS
 "Down" 1.0 0 -2674135 true "" ""
 "Left" 1.0 0 -955883 true "" ""
 "Right" 1.0 0 -6459832 true "" ""
+
+BUTTON
+47
+116
+151
+149
+Start / Pause
+pause
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+BUTTON
+166
+116
+269
+149
+food / wall
+wall
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+SWITCH
+89
+163
+228
+196
+display_history
+display_history
+1
+1
+-1000
 
 @#$#@#$#@
 ## WHAT IS IT?
