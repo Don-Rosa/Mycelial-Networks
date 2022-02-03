@@ -1,212 +1,291 @@
-globals [food]
+globals [
+  COLORS
+  RA
+  FOOD_SOURCE_LIFE
+  HYPH_INIT_LIFE
+  TIP_INIT_LIFE
+  NUT_INIT_LIFE
+]
+
+breed [ tips tip ]
+breed [ nuts nut ] ; nutrients
 
 patches-own [
-  extractor?
-  tip?
-  ; extractor original flow direction
-  odx
-  ody
-  ; current flow direction
-  cdx
-  cdy
+  food?
+  hyph?
+  age
+  life
+  dir
+  idF ; id food source
+  idM ; id mycelium
 ]
+
+tips-own [
+  tid
+  tlife
+]
+
+nuts-own [
+  nid ; id nutrient same as food source
+  nlife
+]
+
 to setup
   clear-all
-  ; set food in the middle and hyphae around
+  ; global vars
+  set RA 22.5 ; Rotation Angle for sensing
+  set COLORS (list brown green red pink)
+  set FOOD_SOURCE_LIFE 10000
+  set HYPH_INIT_LIFE 50
+  set TIP_INIT_LIFE 50
+  set NUT_INIT_LIFE 100
+  ask patches [ set idM -1 ]
+  ; food sources
+  let xs (list 0)
+  let ys (list 0)
+  let p0 patch 0 0
+  let p0_neighbors patches with [ distance p0 < 5 ]
+  let s0 (patch-set p0 p0_neighbors)
+  let p1 patch 120 120
+  let p1_neighbors patches with [ distance p1 < 5 ]
+  let s1 (patch-set p1 p1_neighbors)
+  let p2 patch -20 -100
+  let p2_neighbors patches with [ distance p2 < 5 ]
+  let s2 (patch-set p2 p2_neighbors)
+  initFood s0 0 yellow
+  initMycelium ; only around s0
+  initFood s1 1 white
+  initFood s2 2 cyan
 
-  ask patch 0 0 [ set pcolor yellow ask neighbors4 [
-    set pcolor brown
-    set extractor? false
-    set tip? true
-  ]]
-  ask patch -238 155 [ set pcolor yellow ask neighbors4 [
-    set pcolor pink
-    set extractor? false
-    set tip? true
-  ]]
-  ask patch 180 15  [ set pcolor yellow ask neighbors4 [
-    set pcolor red
-    set extractor? false
-    set tip? true
-  ]]
-  ask patch -150 -200  [ set pcolor yellow ask neighbors4 [
-    set pcolor green
-    set extractor? false
-    set tip? true
-  ]]
-  ask patch 230 213  [ set pcolor yellow ask neighbors4 [
-    set pcolor blue
-    set extractor? false
-    set tip? true
-  ]]
-
-  set food patches with [ pcolor = yellow ]
   reset-ticks
 end
 
-to transform
-  ; hyphaes next to food become extractors
-  ask food [
-    ask neighbors4 with [ extractor? = false ] [
-      set odx pxcor - [pxcor] of myself
-      set ody pycor - [pycor] of myself
-      set cdx odx set cdy ody
-      set extractor? true
+to go
+  collectFood
+  let hyphaes patches with [ hyph? = true ]
+  ask tips [ forage ]
+  ask nuts [ flow ]
+  sproutTips hyphaes
+  surroundFood hyphaes
+  hyphaesTickCost hyphaes
+  draw
+  tick
+end
+
+to resetPatch
+  set food? false
+  set hyph? false
+  set life 0
+  set age 0
+  set dir 0
+  set idF -1
+  set idM -1
+  set pcolor black
+end
+
+to surroundFood [ hyphaes ]
+  ask hyphaes [
+    let h self
+    if random-float 1 > 0.9 [
+      ask neighbors with [ food? = true ] [
+        let f self
+        ask neighbors with [ food? != true ] [
+          set idM [ idM ] of h
+          set hyph? true
+          set life HYPH_INIT_LIFE
+          let odx pxcor - [pxcor] of f
+          let ody pycor - [pycor] of f
+          set dir atan odx ody
+          set pcolor item idM COLORS
+        ]
+      ]
     ]
   ]
 end
 
-to grow
-  ask patches with [ tip? = true ] [
-
-    if pxcor = min-pxcor or pxcor = max-pxcor ; tip dies if it reaches env's limits
-    or pycor = min-pycor or pycor = max-pycor [ set tip? false stop ]
-
-
-    repeat random 2 + 1 [
-      ; growth direction
-      let gdx cdx let gdy cdy
-      ifelse ( cdx = odx ) and ( cdy = ody ) [
-        ; with some probability growth direction deviates from current flow direction
-        if random-float 1 < 0.3 [
-          if cdx = 0 [ set gdx one-of [ 1 -1 ] ]
-          if cdy = 0 [ set gdy one-of [ 1 -1 ] ]
-        ]
-      ] [
-        ; with some probability original flow direction is restored
-        if random-float 1 < 0.1 [
-          set gdx odx
-          set gdy ody
-        ]
-      ]
-
-      ask patch (pxcor + gdx) (pycor + gdy) [
-        if pcolor != black [ stop ]
-        set odx [odx] of myself
-        set ody [ody] of myself
-        set cdx gdx set cdy gdy
-        set pcolor [pcolor] of myself
-        set extractor? false
-        set tip? true
-      ]
+to hyphaesTickCost [ hyphaes ]
+    ask hyphaes [
+    set age age + 1
+    set life life - random-float 1 * hyphae_cost
+    if life <= 0 [
+      resetPatch
     ]
-    set tip? false
   ]
 end
+
+to initFood [ ps i c ]
+  ask ps [
+    set pcolor c
+    set food? true
+    set life FOOD_SOURCE_LIFE
+    set idF i
+  ]
+end
+
+to initMycelium
+  ask patches with [ food? != true ][
+    let pwf one-of neighbors with [ food? = true ]
+    if pwf != nobody [
+      set idM [ idF ] of pwf
+      set hyph? true
+      set life HYPH_INIT_LIFE
+      set pcolor item idM COLORS
+      ; initial food direction
+      let odx pxcor - [pxcor] of pwf
+      let ody pycor - [pycor] of pwf
+      set dir atan odx ody
+    ]
+  ]
+end
+
+to collectFood
+  ask patches with [ food? = true ][
+    let pwf self
+    ask neighbors with [ hyph? = true ] [
+      if random-float 1 < collect_food_probability / 100 [
+        sprout-nuts 1 [
+          set nid idF
+          set color [ pcolor ] of pwf
+          set nlife NUT_INIT_LIFE
+          let odx pxcor - [pxcor] of pwf
+          let ody pycor - [pycor] of pwf
+          set dir atan odx ody
+          set heading [ dir ] of patch-here
+        ]
+      ]
+    ]
+  ]
+end
+
+to sproutTips [ hyphaes ]
+  ask hyphaes [
+    let cn count nuts-here
+    if (life + cn ) / ( 100 + ln (age + 1) ) > branching_threshold / 100 and random-float 1 > 0.9 [
+      let exchange random-float life / 5 ; to change. slider ?
+      ;set life life - exchange ; no cost for hyphae ? no cost for tip ?
+      sprout-tips 1 [
+        set tid [ idM ] of myself
+        set tlife exchange
+        set color green
+        set heading [ dir + random 10 - 4 ] of patch-here
+      ]
+    ]
+  ]
+end
+
+to forage
+  set heading heading + random 5 - 2 ; centered on 0
+  senseHyphaes
+  fd 1
+  let pah patch-ahead 0.5
+  if pah = nobody or tid = [ idM ] of pah or [ food? = true ] of pah [ die ]
+  let endOfWorld ([ min-pxcor = pxcor or max-pxcor = pxcor or min-pycor = pycor or max-pycor = pycor ] of patch-here)
+  if endOfWorld [ die ]
+  ask patch-here [
+    set idM [ tid ] of myself
+    set hyph? true
+    set life HYPH_INIT_LIFE
+    set dir [ heading ] of myself
+    set pcolor item idM COLORS
+  ]
+  set tlife tlife - random-float tip_cost
+  if tlife <= 0 [ die ]
+end
+
+to senseHyphaes
+  let F patch-ahead 2 = nobody or [ idM = [ tid ] of myself ] of patch-ahead 2
+  let FL patch-left-and-ahead 45 2 = nobody or [ idM = [ tid ] of myself ] of patch-left-and-ahead 45 2
+  let FR patch-right-and-ahead 45 2 = nobody or [ idM = [ tid ] of myself ] of patch-right-and-ahead 45 2
+
+  if F [
+    if not FL and not FR [
+      ifelse random 2 = 1 [lt RA][rt RA]
+    ]
+    if not FL [lt RA]
+    if not FR [rt RA]
+  ]
+end
+
+to flow
+  let candidates patches in-cone 1.5 170 with [ idM != -1 and idM = [ nid ] of myself ]
+  if one-of candidates != nobody [ move-to one-of candidates ]
+  let d [ dir ] of patch-here
+  let diff subtract-headings heading d
+  if abs diff > 90 [ set d d - 180 ]
+
+  set heading d
+  ask patch-here [
+    if life < 80 [ ; exchange only if needed ; report: contrast with and without the rule, without food is not going very far
+      let exchange random-float (100 - life) / 1000 * nut_cost
+      ask myself [ set nlife nlife - exchange ]
+      set life max list (100) (life + exchange * 5)
+    ] ; else sprout tip, cost for hyphae + nut disapear
+  ]
+  set nlife nlife - nut_cost
+  if nlife <= 0 [ die ]
+end
+
 
 to draw
-  let mycelium patches with [pcolor != black]
-  let m0 mycelium with [pcolor = brown]
-  let m1 mycelium with [pcolor = pink]
-  let m2 mycelium with [pcolor = red]
-  let m3 mycelium with [pcolor = green]
-  let m4 mycelium with [pcolor = blue]
-
+  let mycelium patches with [ pcolor != black ]
   set-current-plot "Micellium size"
-  set-current-plot-pen "pen-0"
-  let p0 count m0
-  plot p0
-  set-current-plot-pen "pen-1"
-  let p1 count m1
-  plot p1
-  set-current-plot-pen "pen-2"
-  let p2 count m2
-  plot p2
-  set-current-plot-pen "pen-3"
-  let p3 count m3
-  plot p3
-  set-current-plot-pen "pen-4"
-  let p4 count m4
-  plot p4
+  ;set-current-plot-pen "hyphae" Pas forcement utile
+  let p count mycelium
+  ; plot p
+  set-current-plot-pen "tips"
+  plot count tips
+  set-current-plot-pen "nutriment"
+  plot count nuts
 
+  set-current-plot "Micellium symmetry"
+  let up 0
+  let up_c 0
+  let down 0
+  let down_c 0
+  let le 0
+  let le_c 0
+  let ri 0
+  let ri_c 0
+  ask mycelium
+  [
+    if pxcor > 0  [set up up + pxcor set up_c up_c + 1]
+    if pxcor < 0  [set down down - pxcor set down_c down_c + 1]
+    if pycor > 0  [set ri ri + pycor set ri_c ri_c + 1]
+    if pycor < 0  [set le le - pycor set le_c le_c + 1]
+  ]
+
+  set-current-plot-pen "Up"
+  plot up / up_c
+  set-current-plot-pen "Down"
+  plot down / down_c
+  set-current-plot-pen "Right"
+  plot ri / ri_c
+  set-current-plot-pen "Left"
+  plot le / le_c
 
 
   set-current-plot "Micellium density"
-  set-current-plot-pen "pen-0"
-  let r0 max [distancexy 0 0] of m0
-  ifelse ticks > 1 or r0 = 0
+  let r max [distancexy 0 0] of mycelium
+  ifelse ticks > 1 or r = 0
   [
 
-    plot p0 / (r0 * r0 * 2)
-  ]
-  [ plot 0 ] ; the formula above don't work for r = 0
-  set-current-plot-pen "pen-1"
-  let r1 max [distancexy -238 155] of m1
-
-  ifelse ticks > 1 or r1 = 0
-  [
-
-    plot p1 / (r1 * r1 * 2)
-  ]
-  [ plot 0 ] ; the formula above don't work for r = 0
-  set-current-plot-pen "pen-2"
-  let r2 max [distancexy 180 15] of m2
-
-  ifelse ticks > 1 or r2 = 0
-  [
-
-    plot p2 / (r2 * r2 * 2)
-  ]
-  [ plot 0 ] ; the formula above don't work for r = 0
-  set-current-plot-pen "pen-3"
-  let r3 max [distancexy -150 -200] of m3
-
-  ifelse ticks > 1 or r3 = 0
-  [
-
-    plot p3 / (r3 * r3 * 2)
-  ]
-  [ plot 0 ] ; the formula above don't work for r = 0
-  set-current-plot-pen "pen-4"
-  let r4 max [distancexy 230 213] of m4
-
-  ifelse ticks > 1 or r4 = 0
-  [
-
-    plot p4 / (r4 * r4 * 2)
+    plot p / (r * r * 2)
   ]
   [ plot 0 ] ; the formula above don't work for r = 0
 
   set-current-plot "Center of mass"
-  set-current-plot-pen "pen-0"
-  let cmx0 (sum [pxcor] of m0 ) / p0
-  let cmy0 (sum [pycor] of m0 ) / p0
-  plot sqrt (cmx0 ^ 2 + cmy0 ^ 2)
 
-  set-current-plot-pen "pen-1"
-  let cmx1 (sum [pxcor] of m1 ) / p1
-  let cmy1 (sum [pycor] of m1 ) / p1
-  plot sqrt ((cmx1 + 238) ^ 2 + (cmy1 - 155) ^ 2)
+  let cmx (sum [pxcor] of mycelium ) / p
+  let cmy (sum [pycor] of mycelium ) / p
+  plot sqrt (cmx ^ 2 + cmy ^ 2)
 
-  set-current-plot-pen "pen-2"
-  let cmx2 (sum [pxcor] of m2 ) / p2
-  let cmy2 (sum [pycor] of m2 ) / p2
-  plot sqrt ((cmx2 - 180) ^ 2 + (cmy2 - 15) ^ 2)
-
-  set-current-plot-pen "pen-3"
-  let cmx3 (sum [pxcor] of m3 ) / p3
-  let cmy3 (sum [pycor] of m3 ) / p3
-  plot sqrt ((cmx3 + 150) ^ 2 + (cmy3 + 200) ^ 2)
-
-  set-current-plot-pen "pen-4"
-  let cmx4 (sum [pxcor] of m4 ) / p4
-  let cmy4 (sum [pycor] of m4) / p4
-  plot sqrt ((cmx4 - 230) ^ 2 + (cmy4 - 213) ^ 2)
-
-end
-
-to go
-  transform
-  grow
-  draw
-  tick
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
-296
-20
-833
-558
+299
+18
+820
+540
 -1
 -1
 1.0
@@ -216,13 +295,13 @@ GRAPHICS-WINDOW
 1
 1
 0
+0
+0
 1
-1
-1
--264
-264
--264
-264
+-256
+256
+-256
+256
 0
 0
 1
@@ -230,10 +309,10 @@ ticks
 30.0
 
 BUTTON
-66
-22
-139
-55
+78
+58
+151
+91
 setup
 setup
 NIL
@@ -247,10 +326,10 @@ NIL
 1
 
 BUTTON
-67
-70
-138
-103
+78
+106
+151
+139
 go
 go
 T
@@ -263,71 +342,156 @@ NIL
 NIL
 1
 
-PLOT
-857
-21
-1073
-183
-Micellium size
-ticks
-hyphae
-0.0
-400.0
-0.0
-1000.0
-true
-false
-"" ""
-PENS
-"pen-0" 1.0 0 -8431303 true "" ""
-"pen-1" 1.0 0 -2064490 true "" ""
-"pen-2" 1.0 0 -2674135 true "" ""
-"pen-3" 1.0 0 -14439633 true "" ""
-"pen-4" 1.0 0 -14070903 true "" ""
+SLIDER
+38
+223
+263
+256
+collect_food_probability
+collect_food_probability
+0
+5
+1.0
+0.1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+38
+178
+264
+211
+branching_threshold
+branching_threshold
+90
+100
+96.9
+0.1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+62
+288
+234
+321
+nut_cost
+nut_cost
+0
+1
+0.15
+0.01
+1
+NIL
+HORIZONTAL
+
+SLIDER
+62
+332
+234
+365
+hyphae_cost
+hyphae_cost
+0
+10
+0.6
+0.1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+61
+377
+233
+410
+tip_cost
+tip_cost
+0
+1
+0.25
+0.01
+1
+NIL
+HORIZONTAL
 
 PLOT
-859
-193
-1072
-371
+1143
+322
+1405
+537
 Micellium density
 ticks
-density 
+density
 0.0
-400.0
+500.0
 0.0
-0.5
+1.0
 true
 false
 "" ""
 PENS
-"pen-0" 1.0 0 -8431303 true "" ""
-"pen-1" 1.0 0 -2064490 true "" ""
-"pen-2" 1.0 0 -2674135 true "" ""
-"pen-3" 1.0 0 -13840069 true "" ""
-"pen-4" 1.0 0 -13345367 true "" ""
+"default" 1.0 0 -6459832 true "" ""
 
 PLOT
-858
-379
-1073
-554
+854
+320
+1130
+536
 Center of mass
 ticks
 euclidean distance
 0.0
-400.0
+500.0
 0.0
 10.0
 true
 false
 "" ""
 PENS
-"pen-0" 1.0 0 -6459832 true "" ""
-"pen-1" 1.0 0 -2064490 true "" ""
-"pen-2" 1.0 0 -2674135 true "" ""
-"pen-3" 1.0 0 -13840069 true "" ""
-"pen-4" 1.0 0 -13345367 true "" ""
+"default" 1.0 0 -6459832 true "" ""
+
+PLOT
+852
+49
+1126
+258
+Micellium size
+ticks
+NIL
+0.0
+500.0
+0.0
+250.0
+true
+true
+"" ""
+PENS
+"tips" 1.0 0 -14070903 true "" ""
+"nutriment" 1.0 0 -14439633 true "" ""
+
+PLOT
+1142
+55
+1417
+255
+Micellium symmetry
+ticks
+NIL
+0.0
+500.0
+0.0
+10.0
+true
+true
+"" ""
+PENS
+"Up" 1.0 0 -7500403 true "" ""
+"Down" 1.0 0 -2674135 true "" ""
+"Left" 1.0 0 -955883 true "" ""
+"Right" 1.0 0 -6459832 true "" ""
 
 @#$#@#$#@
 ## WHAT IS IT?

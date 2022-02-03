@@ -175,8 +175,8 @@ NIL
 PLOT
 845
 40
-1045
-190
+1067
+204
 Micellium size
 ticks
 hyphae
@@ -191,10 +191,10 @@ PENS
 "default" 1.0 0 -6459832 true "" ""
 
 PLOT
-847
-218
-1047
-368
+845
+213
+1069
+378
 Micellium density
 ticks
 density
@@ -211,14 +211,14 @@ PENS
 PLOT
 846
 390
-1046
-540
+1070
+557
 Center of mass
 ticks
-distance
+euclidean distance
 0.0
 400.0
--10.0
+0.0
 10.0
 true
 false
