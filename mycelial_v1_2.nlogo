@@ -99,9 +99,9 @@ to go
         let y mouse-ycor
         ask patches with
         [
-          (x - 5 <= pxcor and pxcor <= x + 5)
+          (x - 3 <= pxcor and pxcor <= x + 3)
           and
-          (y - 5 <= pycor and pycor <= y + 5)
+          (y - 3 <= pycor and pycor <= y + 3)
         ] [set walled? true ifelse display_history [set pcolor black] [set pcolor white] ]
       ]
     ]
