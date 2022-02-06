@@ -16,6 +16,7 @@ breed [ nuts nut ] ; nutrients
 
 patches-own [
   food?
+  walled?
   hyph?
   age
   life
@@ -101,7 +102,7 @@ to go
           (x - 5 <= pxcor and pxcor <= x + 5)
           and
           (y - 5 <= pycor and pycor <= y + 5)
-        ] [ set pcolor white ]
+        ] [set walled? true ifelse display_history [set pcolor black] [set pcolor white] ]
       ]
     ]
     [
@@ -225,7 +226,7 @@ to forage
   senseHyphaes
   fd 1
   let pah patch-ahead 0.5
-  if pah = nobody or tid = [ idM ] of pah or [ food? = true ] of pah [ die ]
+  if pah = nobody or tid = [ idM ] of pah or [ food? = true or walled? = true ] of pah [ die ]
   let endOfWorld ([ min-pxcor = pxcor or max-pxcor = pxcor or min-pycor = pycor or max-pycor = pycor ] of patch-here)
   if endOfWorld [ die ]
   ask patch-here [
